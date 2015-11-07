@@ -1,0 +1,12 @@
+#MSYS Launcher configure
+[Launcher]
+# MSYSTEM hava 3 type MSYS MINGW32 MINGW64
+MSYSTEM="MINGW64"
+Root="D:/MPOSIX2"
+WD="D:/MPOSIX2/usr/bin"
+Mintty="/usr/bin/mintty.exe"
+EnableICON=true
+EnableZshell=false
+ICONPath="/msys2.ico"
+Shell="bash"
+
