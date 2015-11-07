@@ -214,9 +214,35 @@ SCS_WOW_BINARY
 A 16-bit Windows-based application
 **/
 
+
+// struct TargetArchitecture{
+//   int typeId;
+//   const wchar_t *name;
+// };
+
 bool ProcessTargetIsMatch(const wchar_t *binary)
 {
-  DWORD dwSelf,dwBinary;
+  // DWORD dwSelf,dwBinary;
+  // TargetArchitecture targetList[]={
+  //   {SCS_32BIT_BINARY,L"32-bit Windows-based application"}, //0
+  //   {SCS_64BIT_BINARY,L"64-bit Windows-based application"}, //6
+  //   {SCS_DOS_BINARY,L"MS-DOS – based application"}, //1
+  //   {SCS_OS216_BINARY,L"16-bit OS/2-based application"},//5
+  //   {SCS_PIF_BINARY,L"PIF file that executes an MS-DOS – based application"},//3
+  //   {SCS_POSIX_BINARY,L"POSIX – based application"},//4
+  //   {SCS_WOW_BINARY,L"16-bit Windows-based application"} //2
+  // };
+  const wchar_t *TargetList[]={
+    L"32-bit Windows-based application",
+    L"MS-DOS – based application",
+    L"16-bit Windows-based application",
+    L"PIF file that executes an MS-DOS – based application",
+    L"POSIX – based application",
+    L"16-bit OS/2-based application",
+    L"64-bit Windows-based application",
+    L"Unknown Target application"
+  };
+  DWORD dwBinary,dwSelf;
   wchar_t selfPath[32767];
   if(!GetModuleFileNameW(nullptr,selfPath,32767))
     return false;
@@ -224,7 +250,13 @@ bool ProcessTargetIsMatch(const wchar_t *binary)
     return false;
   if(GetBinaryTypeW(selfPath,&dwSelf)==0)
     return false;
-  return dwSelf==dwBinary;
+  if(dwSelf==dwBinary) return true;
+  std::wstring message=L"Not match target Architecture \nLauncher self is ";
+  message+=TargetList[dwSelf>7?7:dwSelf];
+  message+=L"\nBut Mintty ("+std::wstring(binary)+std::wstring(L" ) is ");
+  message+=TargetList[dwBinary>7?7:dwBinary];
+  MessageBoxW(nullptr,message.c_str(),L"Process Architecture not match ",MB_OK|MB_ICONERROR);
+  return false;
 }
 
 
@@ -244,7 +276,7 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
   std::wstring binary=config.root+config.mintty;
   if(!ProcessTargetIsMatch(binary.c_str()))
   {
-    MessageBoxW(nullptr,binary.c_str(),L"Launcher Taget match not with:",MB_OK);
+    //MessageBoxW(nullptr,binary.c_str(),L"Launcher Taget match not with:",MB_OK);
     return false;
   }
   std::wstring args=std::wstring(L"-i")+config.icon+std::wstring(L" /usr/bin/");
@@ -331,7 +363,7 @@ int WINAPI wWinMain(
   }
   LocalFree(Argv);
   if(!StartupMiniPosixEnv(config)){
-    MessageBoxW(nullptr,L"Please check your launcher profile!",L"Cannot Start MSYS2",MB_OK|MB_ICONERROR);
+    //MessageBoxW(nullptr,L"Please check your launcher setting !",L"Cannot Start MSYS2",MB_OK|MB_ICONERROR);
     return 2;
   }
   return 0;
