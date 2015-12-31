@@ -313,7 +313,7 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
     zargs,
     NULL,
     NULL,
-    NULL,
+    TRUE,
     CREATE_NEW_CONSOLE,
     NULL,
     NULL,
