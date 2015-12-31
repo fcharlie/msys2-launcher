@@ -184,82 +184,6 @@ bool PutEnvironmentVariableW(const wchar_t *name,const wchar_t *va)
   return SetEnvironmentVariableW(name,buffer)?true:false;
 }
 
-/**
-SCS_32BIT_BINARY
-0
-A 32-bit Windows-based application
-----
-SCS_64BIT_BINARY
-6
-A 64-bit Windows-based application.
------
-SCS_DOS_BINARY
-1
-An MS-DOS – based application
-----
-SCS_OS216_BINARY
-5
-A 16-bit OS/2-based application
-----
-SCS_PIF_BINARY
-3
-A PIF file that executes an MS-DOS – based application
-----
-SCS_POSIX_BINARY
-4
-A POSIX – based application
-----
-SCS_WOW_BINARY
-2
-A 16-bit Windows-based application
-**/
-
-
-// struct TargetArchitecture{
-//   int typeId;
-//   const wchar_t *name;
-// };
-
-bool ProcessTargetIsMatch(const wchar_t *binary)
-{
-  // DWORD dwSelf,dwBinary;
-  // TargetArchitecture targetList[]={
-  //   {SCS_32BIT_BINARY,L"32-bit Windows-based application"}, //0
-  //   {SCS_64BIT_BINARY,L"64-bit Windows-based application"}, //6
-  //   {SCS_DOS_BINARY,L"MS-DOS – based application"}, //1
-  //   {SCS_OS216_BINARY,L"16-bit OS/2-based application"},//5
-  //   {SCS_PIF_BINARY,L"PIF file that executes an MS-DOS – based application"},//3
-  //   {SCS_POSIX_BINARY,L"POSIX – based application"},//4
-  //   {SCS_WOW_BINARY,L"16-bit Windows-based application"} //2
-  // };
-  const wchar_t *TargetList[]={
-    L"32-bit Windows-based application",
-    L"MS-DOS – based application",
-    L"16-bit Windows-based application",
-    L"PIF file that executes an MS-DOS – based application",
-    L"POSIX – based application",
-    L"16-bit OS/2-based application",
-    L"64-bit Windows-based application",
-    L"Unknown Target application"
-  };
-  DWORD dwBinary,dwSelf;
-  wchar_t selfPath[32767];
-  if(!GetModuleFileNameW(nullptr,selfPath,32767))
-    return false;
-  if(GetBinaryTypeW(binary,&dwBinary)==0)
-    return false;
-  if(GetBinaryTypeW(selfPath,&dwSelf)==0)
-    return false;
-  if(dwSelf==dwBinary) return true;
-  std::wstring message=L"Not match target Architecture \nLauncher self is ";
-  message+=TargetList[dwSelf>7?7:dwSelf];
-  message+=L"\nBut Mintty ("+std::wstring(binary)+std::wstring(L" ) is ");
-  message+=TargetList[dwBinary>7?7:dwBinary];
-  MessageBoxW(nullptr,message.c_str(),L"Process Architecture not match ",MB_OK|MB_ICONERROR);
-  return false;
-}
-
-
 bool StartupMiniPosixEnv(LauncherStructure &config)
 {
   SetCurrentDirectoryW(config.root.c_str());
@@ -273,27 +197,13 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
   si.cb = sizeof(si);
   si.dwFlags = STARTF_USESHOWWINDOW;
   si.wShowWindow = SW_SHOW;
-  // if(!ProcessTargetIsMatch(config.mintty.c_str()))
-  // {
-	 // //MessageBoxW()
-  //   return false;
-  // }
-  int const ArraySize=32767;
+
+  int const ArraySize=8192;
   wchar_t cmdline[ArraySize]={0};
   wsprintfW(cmdline,L"%s -i%s /usr/bin/%s --login",
   config.mintty.c_str(),
   config.icon.c_str(),
   config.enableZshell?L"zsh":config.shell.c_str());
-  //MessageBoxW(nullptr,cmdline,L"Cannot Invoker GetUserNameW",MB_OK);
-  DWORD maxLength=MAX_PATH;
-  wchar_t name[MAX_PATH]={0};
-  if(GetUserNameW(name, &maxLength)==0){
-    DWORD dw= GetLastError();
-    wchar_t sw[32]={0};
-    wsprintfW(sw,L"GetLastError :%d\n",dw);
-    MessageBoxW(nullptr,sw,L"Cannot Invoker GetUserNameW",MB_OK);
-    return false;
-  }
   
   BOOL result = CreateProcessW(
     NULL,
@@ -311,7 +221,6 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
   }
-  //ShellExecuteW(nullptr,L"open",binary.c_str(),args.c_str(),home.c_str(),0);
   return true;
 }
 
@@ -349,9 +258,5 @@ int WINAPI wWinMain(
     return 1;
   }
   LocalFree(Argv);
-  if(!StartupMiniPosixEnv(config)){
-    //MessageBoxW(nullptr,L"Please check your launcher setting !",L"Cannot Start MSYS2",MB_OK|MB_ICONERROR);
-    return 2;
-  }
-  return 0;
+  return StartupMiniPosixEnv(config)?2:0;
 }
