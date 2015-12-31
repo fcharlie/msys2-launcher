@@ -1,3 +1,4 @@
+#pragma code_page(65001)
 #include "windows.h"
 #include "resource.h"
 
@@ -25,7 +26,7 @@ BEGIN
             VALUE "FileDescription", "MSYS2 Environment Launcher\0"
             VALUE "FileVersion", "1.0.0\0"
             VALUE "InternalName", "Launcher.exe\0"
-            VALUE "LegalCopyright", "Copyright (C)  2015 The ForceStudio.All Rights Reserved\0"
+            VALUE "LegalCopyright", "Copyright © 2016 The ForceStudio.All Rights Reserved\0"
             VALUE "OriginalFilename", "Launcher.exe\0"
             VALUE "ProductName", "MSYS2 Environment Launcher\0"
             VALUE "ProductVersion", "1.0.0.0\0"

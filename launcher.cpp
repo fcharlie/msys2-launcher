@@ -273,11 +273,11 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
   si.cb = sizeof(si);
   si.dwFlags = STARTF_USESHOWWINDOW;
   si.wShowWindow = SW_SHOW;
-  if(!ProcessTargetIsMatch(config.mintty.c_str()))
-  {
-	 //MessageBoxW()
-    return false;
-  }
+  // if(!ProcessTargetIsMatch(config.mintty.c_str()))
+  // {
+	 // //MessageBoxW()
+  //   return false;
+  // }
   int const ArraySize=32767;
   wchar_t cmdline[ArraySize]={0};
   wsprintfW(cmdline,L"%s -i%s /usr/bin/%s --login",
