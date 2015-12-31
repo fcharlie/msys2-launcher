@@ -4,7 +4,7 @@
 MSYSTEM="MINGW64"
 Root="D:/MPOSIX2"
 WD="D:/MPOSIX2/usr/bin"
-Mintty="/usr/bin/mintty.exe"
+Mintty="D:/MPOSIX2/usr/bin/mintty.exe"
 EnableICON=true
 EnableZshell=false
 ICONPath="/msys2.ico"

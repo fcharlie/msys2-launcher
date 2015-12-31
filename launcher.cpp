@@ -158,7 +158,7 @@ bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
   keyBind("Launcher.MSYSTEM",L"MINGW64",config.env);
   keyBind("Launcher.Root",L"C:/MSYS2",config.root);
   keyBind("Launcher.WD",L"C:/MSYS2/usr/bin",config.wd);
-  keyBind("Launcher.Mintty",L"/usr/bin/mintty.exe",config.mintty);
+  keyBind("Launcher.Mintty",L"C:/MSYS2/usr/bin/mintty.exe",config.mintty);
   keyBind("Launcher.ICONPath",L"/msys2.ico",config.icon);
   keyBind("Launcher.Shell",L"bash",config.shell);
   keyBind("Launcher.ShellArgs",L"",config.shellArgs);
@@ -273,28 +273,18 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
   si.cb = sizeof(si);
   si.dwFlags = STARTF_USESHOWWINDOW;
   si.wShowWindow = SW_SHOW;
-  std::wstring binary=config.root+config.mintty;
-  if(!ProcessTargetIsMatch(binary.c_str()))
+  if(!ProcessTargetIsMatch(config.mintty.c_str()))
   {
-    //MessageBoxW(nullptr,binary.c_str(),L"Launcher Taget match not with:",MB_OK);
+	 //MessageBoxW()
     return false;
   }
-  std::wstring args=std::wstring(L"-i")+config.icon+std::wstring(L" /usr/bin/");
-  /**
-  std::wstring args=std::wstring(L"-o RelaunchCommand=\"")+config.root;
-  if(config.enableZshell){
-      args+=std::wstring(L"\" -o RelauncheDisplayName=\"Mini Posix Environment\"  -i ");
-  }else{
-    args+=config.shell+std::wstring(L"\" -o RelauncheDisplayName=\"Mini Posix Environment\"  -i ");
-  }
-  **/
-  if(config.enableZshell){
-    args+=std::wstring(L"zsh --login -i ");
-  }else{
-    args+=config.shell+std::wstring(L" --login -i ");
-  }
-  if(!config.shellArgs.empty())
-    args.append(config.shellArgs);
+  int const ArraySize=32767;
+  wchar_t cmdline[ArraySize]={0};
+  wsprintfW(cmdline,L"%s -i%s /usr/bin/%s --login",
+  config.mintty.c_str(),
+  config.icon.c_str(),
+  config.enableZshell?L"zsh":config.shell.c_str());
+  //MessageBoxW(nullptr,cmdline,L"Cannot Invoker GetUserNameW",MB_OK);
   DWORD maxLength=MAX_PATH;
   wchar_t name[MAX_PATH]={0};
   if(GetUserNameW(name, &maxLength)==0){
@@ -304,13 +294,10 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
     MessageBoxW(nullptr,sw,L"Cannot Invoker GetUserNameW",MB_OK);
     return false;
   }
-  //MessageBoxW(nullptr,home.c_str(),L"Args",MB_OK);
-  wchar_t zargs[32767]={0};
-  args.copy(zargs,args.size(),0);
-  //MessageBoxW(nullptr,zargs,L"Args",MB_OK);
+  
   BOOL result = CreateProcessW(
-    binary.c_str(),
-    zargs,
+    NULL,
+    cmdline,
     NULL,
     NULL,
     TRUE,
