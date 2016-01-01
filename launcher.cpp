@@ -1,6 +1,6 @@
 ﻿/**
 * MSYS2 Launcher
-*
+* Copyright (C) 2016, ForceStudio All Rights Reserved.
 **/
 #include <cstdio>
 #include <cstdlib>
