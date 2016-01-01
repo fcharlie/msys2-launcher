@@ -5,8 +5,12 @@ MSYSTEM="MINGW64"
 Root="D:/MPOSIX2"
 WD="D:/MPOSIX2/usr/bin"
 Mintty="D:/MPOSIX2/usr/bin/mintty.exe"
-EnableICON=true
 EnableZshell=false
-ICONPath="/msys2.ico"
 Shell="bash"
+UseClearEnv=true
+ICONPath="/msys2.ico"
+#AppendShellArgs="Hello world"
+#AppendPath=[
+#  "D:/Tools/Path"
+#]
 

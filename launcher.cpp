@@ -7,9 +7,11 @@
 #include <cstring>
 #include <Windows.h>
 #include <Shlwapi.h>
+#include <iostream>
 #define  SECURITY_WIN32
 #include <Security.h>
 #include <string>
+#include <vector>
 #if defined(_MSC_VER)
 #pragma comment(lib,"user32")
 #pragma comment(lib,"kernel32")
@@ -27,10 +29,11 @@ struct LauncherStructure{
   std::wstring wd;
   std::wstring mintty;
   std::wstring icon;
-  std::wstring shell;
+  std::wstring othrShell;
   std::wstring shellArgs;
-  bool enableIcon;
+  std::vector<std::wstring> appendPath;
   bool enableZshell;
+  bool clearEnvironment;
 };
 class Characters{
 private:
@@ -129,6 +132,7 @@ bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
   std::shared_ptr<cpptoml::table> g;
   try {
     g = cpptoml::parse_file(chars.Get());
+    std::cout << (*g) << std::endl;
   } catch (const cpptoml::parse_exception &e) {
     (void)e;
     MessageBoxW(nullptr,
@@ -137,35 +141,192 @@ bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
       MB_OK|MB_ICONERROR);
     return false;
   }
-  auto keyBind = [&](const char *key, const wchar_t *v, std::wstring &sv) {
+  auto Strings = [&](const char *key, const wchar_t *v, std::wstring &sv) {
     if (g->contains_qualified(key)) {
       std::string astr = g->get_qualified(key)->as<std::string>()->get();
-      printf("Key Value: %s: %s\n",key,astr.c_str());
+      ///printf("Key Value: %s: %s\n",key,astr.c_str());
       WCharacters was(astr.c_str());
       sv=was.Get();
       return;
     }
-    sv = v;
+    if(v){
+        sv = v;
+      }
   };
-  auto keyBool = [&](const char *key, bool b, bool &cb) {
+  auto Boolean = [&](const char *key, bool b) {
     if (g->contains_qualified(key)) {
-      cb = g->get_qualified(key)->as<bool>()->get();
-      // printf("Key and value: %s:%s\n",key,cb?"true":"false");
-      return;
+      return g->get_qualified(key)->as<bool>()->get();
     }
-    cb = b;
+    return b;
   };
-  keyBind("Launcher.MSYSTEM",L"MINGW64",config.env);
-  keyBind("Launcher.Root",L"C:/MSYS2",config.root);
-  keyBind("Launcher.WD",L"C:/MSYS2/usr/bin",config.wd);
-  keyBind("Launcher.Mintty",L"C:/MSYS2/usr/bin/mintty.exe",config.mintty);
-  keyBind("Launcher.ICONPath",L"/msys2.ico",config.icon);
-  keyBind("Launcher.Shell",L"bash",config.shell);
-  keyBind("Launcher.ShellArgs",L"",config.shellArgs);
-  keyBool("Launcher.EnableICON",true,config.enableIcon);
-  keyBool("Launcher.EnableZshell",false,config.enableZshell);
+  auto Vector = [&](const char *key, std::vector<std::wstring> &v) {
+    if (g->contains_qualified(key) && g->get_qualified(key)->is_array()) {
+      auto av = g->get_qualified(key)->as_array();
+      for (auto &e : av->get()) {
+        WCharacters was(e->as<std::string>()->get().c_str());
+        v.push_back(was.Get());
+      }
+    }
+  };
+  Strings("Launcher.MSYSTEM",L"MINGW64",config.env);
+  Strings("Launcher.Root",L"C:/MSYS2",config.root);
+  Strings("Launcher.WD",L"C:/MSYS2/usr/bin",config.wd);
+  Strings("Launcher.Mintty",L"C:/MSYS2/usr/bin/mintty.exe",config.mintty);
+  Strings("Launcher.ICONPath",L"/msys2.ico",config.icon);
+  Strings("Launcher.Shell",L"bash",config.othrShell);
+  Strings("Launcher.AppendShellArgs",nullptr,config.shellArgs);
+  Vector("Launcher.AppendPath",config.appendPath);
+  config.enableZshell=Boolean("Launcher.EnableZshell",false);
+  config.clearEnvironment=Boolean("Launcher.UseClearEnv",false);
   return true;
 }
+
+enum KEnvStateMachine : int {
+  kClearReset = 0,
+  kEscapeAllow = 1,
+  kMarkAllow = 2,
+  kBlockBegin = 3,
+  kBlockEnd = 4
+};
+
+static bool ResolveEnvironment(const std::wstring &k, std::wstring &v) {
+  wchar_t buffer[32767];
+  auto dwSize=GetEnvironmentVariableW(k.c_str(),buffer,32767);
+  if(dwSize==0||dwSize>=32767)
+    return false;
+  buffer[dwSize]=0;
+  v=buffer;
+  return true;
+}
+
+static bool EnvironmentExpend(std::wstring &va){
+  if (va.empty())
+    return false;
+  std::wstring ns, ks;
+  auto p = va.c_str();
+  auto n = va.size();
+  int pre = 0;
+  size_t i = 0;
+  KEnvStateMachine state = kClearReset;
+  for (; i < n; i++) {
+    switch (p[i]) {
+    case '`': {
+      switch (state) {
+      case kClearReset:
+        state = kEscapeAllow;
+        break;
+      case kEscapeAllow:
+        ns.push_back('`');
+        state = kClearReset;
+        break;
+      case kMarkAllow:
+        state = kEscapeAllow;
+        ns.push_back('$');
+        break;
+      case kBlockBegin:
+        continue;
+      default:
+        ns.push_back('`');
+        continue;
+      }
+    } break;
+    case '$': {
+      switch (state) {
+      case kClearReset:
+        state = kMarkAllow;
+        break;
+      case kEscapeAllow:
+        ns.push_back('$');
+        state = kClearReset;
+        break;
+      case kMarkAllow:
+        ns.push_back('$');
+        state = kClearReset;
+        break;
+      case kBlockBegin:
+      case kBlockEnd:
+      default:
+        ns.push_back('$');
+        continue;
+      }
+    } break;
+    case '{': {
+      switch (state) {
+      case kClearReset:
+      case kEscapeAllow:
+        ns.push_back('{');
+        state = kClearReset;
+        break;
+      case kMarkAllow: {
+        state = kBlockBegin;
+        pre = i;
+      } break;
+      case kBlockBegin:
+        ns.push_back('{');
+        break;
+      default:
+        continue;
+      }
+    } break;
+    case '}': {
+      switch (state) {
+      case kClearReset:
+      case kEscapeAllow:
+        ns.push_back('}');
+        state = kClearReset;
+        break;
+      case kMarkAllow:
+        state = kClearReset;
+        ns.push_back('$');
+        ns.push_back('}');
+        break;
+      case kBlockBegin: {
+        ks.assign(&p[pre + 1], i - pre - 1);
+        std::wstring v;
+        if (ResolveEnvironment(ks, v))
+          ns.append(v);
+        state = kClearReset;
+      } break;
+      default:
+        continue;
+      }
+    } break;
+    default: {
+      switch (state) {
+      case kClearReset:
+        ns.push_back(p[i]);
+        break;
+      case kEscapeAllow:
+        ns.push_back('`');
+        ns.push_back(p[i]);
+        state = kClearReset;
+        break;
+      case kMarkAllow:
+        ns.push_back('$');
+        ns.push_back(p[i]);
+        state = kClearReset;
+        break;
+      case kBlockBegin:
+      default:
+        continue;
+      }
+    } break;
+    }
+  }
+  va = ns;
+  return true;
+}
+
+bool ClearEnvironmentVariableW(){
+  //WINDIR expend like C:\WINDOW
+  std::wstring path=L"${WINDIR}\\System32;${WINDIR};${WINDIR}\\System32\\Wbem;${WINDIR}\\System32\\WindowsPowerShell\\v1.0\\";
+  if(EnvironmentExpend(path)){
+    SetEnvironmentVariableW(L"PATH",path.c_str());
+    return true;
+  }
+  return false;
+}
+
 
 bool PutEnvironmentVariableW(const wchar_t *name,const wchar_t *va)
 {
@@ -184,12 +345,29 @@ bool PutEnvironmentVariableW(const wchar_t *name,const wchar_t *va)
   return SetEnvironmentVariableW(name,buffer)?true:false;
 }
 
+bool PutPathEnvironmentVariableW(std::vector<std::wstring> &pv){
+  std::wstring path(L";");
+  for(auto &s:pv){
+    path.append(s);
+    path.push_back(';');
+  }
+  return PutEnvironmentVariableW(L"PATH",path.c_str());
+}
+
 bool StartupMiniPosixEnv(LauncherStructure &config)
 {
   SetCurrentDirectoryW(config.root.c_str());
+  if(config.clearEnvironment){
+    ClearEnvironmentVariableW();
+  }
   SetEnvironmentVariableW(L"MSYSTEM",config.env.c_str());
   SetEnvironmentVariableW(L"WD",config.wd.c_str());
   SetEnvironmentVariableW(L"MSYSCON",L"mintty.exe");
+
+  if(!config.appendPath.empty()){
+    PutPathEnvironmentVariableW(config.appendPath);
+  }
+
   //PutEnvironmentVariableW(L"PATH",config.wd.c_str());
   PROCESS_INFORMATION pi;
   STARTUPINFO si;
@@ -200,11 +378,17 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
 
   int const ArraySize=8192;
   wchar_t cmdline[ArraySize]={0};
-  wsprintfW(cmdline,L"%s -i%s /usr/bin/%s --login",
+  auto l=wsprintfW(cmdline,L"%s -i%s /usr/bin/%s --login ",
   config.mintty.c_str(),
   config.icon.c_str(),
-  config.enableZshell?L"zsh":config.shell.c_str());
-  
+  config.enableZshell?L"zsh":config.othrShell.c_str());
+  if(!config.shellArgs.empty()){
+    if((size_t)(ArraySize-l)>config.shellArgs.size()){
+      auto p=cmdline+l;
+      wsprintfW(p,L"%s",config.shellArgs.c_str());
+    }
+  }
+  ///CreateProcess
   BOOL result = CreateProcessW(
     NULL,
     cmdline,
