@@ -12,15 +12,13 @@
 #include <Security.h>
 #include <string>
 #include <vector>
+
 #if defined(_MSC_VER)
-#pragma comment(lib,"user32")
-#pragma comment(lib,"kernel32")
-#pragma comment(lib,"gdi32")
-#pragma comment(lib,"Shlwapi")
 #if defined(_WIN32_WINNT) &&_WIN32_WINNT>=_WIN32_WINNT_WIN8
 #include <Processthreadsapi.h>
 #endif
 #endif
+
 #include "cpptoml.h"
 
 struct LauncherStructure{
