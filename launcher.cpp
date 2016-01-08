@@ -406,20 +406,19 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
 }
 
 #ifdef __GNUC__
-int WINAPI WinMain(
-  HINSTANCE hInstance,
-  HINSTANCE hPrevInstance,
-  LPSTR lpCmdLine,
-  int nCmdShow
-){
-  return wWinMain(hInstance,hPrevInstance,nullptr,nCmdShow);
-}
+#define launcherStartup WinMain
+#define CHARPTR LPSTR
+#elif defined(_MSC_VER)
+#define launcherStartup wWinMain
+#define CHARPTR LPWSTR
+#else
+#error "Cannot support this compiler !"
 #endif
 
-int WINAPI wWinMain(
+int WINAPI launcherStartup(
   HINSTANCE hInstance,
   HINSTANCE hPrevInstance,
-  LPWSTR lpCmdLine,
+  CHARPTR lpCmdLine,
   int nCmdShow)
 {
   LauncherStructure config;
