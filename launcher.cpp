@@ -33,6 +33,7 @@ struct LauncherStructure{
   bool enableZshell;
   bool clearEnvironment;
 };
+
 class Characters{
 private:
     char *str;
@@ -142,7 +143,6 @@ bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
   auto Strings = [&](const char *key, const wchar_t *v, std::wstring &sv) {
     if (g->contains_qualified(key)) {
       std::string astr = g->get_qualified(key)->as<std::string>()->get();
-      ///printf("Key Value: %s: %s\n",key,astr.c_str());
       WCharacters was(astr.c_str());
       sv=was.Get();
       return;
@@ -366,7 +366,6 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
     PutPathEnvironmentVariableW(config.appendPath);
   }
 
-  //PutEnvironmentVariableW(L"PATH",config.wd.c_str());
   PROCESS_INFORMATION pi;
   STARTUPINFO si;
   ZeroMemory(&si, sizeof(si));
@@ -412,12 +411,8 @@ int WINAPI WinMain(
   HINSTANCE hPrevInstance,
   LPSTR lpCmdLine,
   int nCmdShow
-  ){
-  WCharacters wstr(const_cast<const char*>(lpCmdLine));
-  auto c=wcsdup(wstr.Get());
-  auto l=wWinMain(hInstance,hPrevInstance,c,nCmdShow);
-  free(c);
-  return l;
+){
+  return wWinMain(hInstance,hPrevInstance,nullptr,nCmdShow);
 }
 #endif
 
