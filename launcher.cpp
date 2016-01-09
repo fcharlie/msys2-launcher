@@ -10,6 +10,7 @@
 #include <iostream>
 #define  SECURITY_WIN32
 #include <Security.h>
+#include <StrSafe.h>
 #include <string>
 #include <vector>
 
@@ -101,6 +102,7 @@ bool GetProcessImageFileFolder(std::wstring &wstr)
   return true;
 }
 
+
 bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
 {
   std::wstring pfile;
@@ -114,9 +116,9 @@ bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
       return false;
     }
     pfile=folder+L"/launcher.toml";
-    if(_waccess_s(pfile.c_str(),04)!=0){
+    if(!PathFileExistsW(pfile.c_str())){
       pfile=folder+L"/launcher.exe.toml";
-      if(_waccess_s(pfile.c_str(),04)!=0){
+      if(!PathFileExistsW(pfile.c_str())){
         MessageBoxW(nullptr,
           folder.c_str(),
           L"Cannot open launcher.toml or launcher.exe.toml on this path",
@@ -339,7 +341,7 @@ bool PutEnvironmentVariableW(const wchar_t *name,const wchar_t *va)
     dwSize++;
     buffer[dwSize]=0;
   }
-  wcscat_s(buffer,32767-dwSize,va);
+  StringCbCatW(buffer,32767-dwSize,va);
   return SetEnvironmentVariableW(name,buffer)?true:false;
 }
 
@@ -375,15 +377,19 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
 
   int const ArraySize=8192;
   wchar_t cmdline[ArraySize]={0};
-  auto l=wsprintfW(cmdline,L"%s -i%s /usr/bin/%s --login ",
+  auto hr=StringCbPrintf(cmdline,ArraySize,L"%s -i%s /usr/bin/%s --login ",
   config.mintty.c_str(),
   config.icon.c_str(),
   config.enableZshell?L"zsh":config.othrShell.c_str());
+  if(hr!=S_OK){
+      MessageBoxW(nullptr,L"Please check your profile !",L"Parse commandline failed !",MB_OK|MB_ICONERROR);
+      return false;
+  }
   if(!config.shellArgs.empty()){
-    if((size_t)(ArraySize-l)>config.shellArgs.size()){
-      auto p=cmdline+l;
-      wsprintfW(p,L"%s",config.shellArgs.c_str());
-    }
+      size_t l=0;
+      if(StringCbLength(cmdline,ArraySize,&l)==S_OK){
+          StringCbCatW(cmdline,ArraySize-l,config.othrShell.c_str());   
+      }
   }
   ///CreateProcess
   BOOL result = CreateProcessW(
@@ -426,7 +432,7 @@ int WINAPI launcherStartup(
   int Argc;
   LPWSTR *Argv = CommandLineToArgvW(GetCommandLineW(), &Argc);
   if(Argc>=3){
-    if(wcscmp(Argv[1],L"-c")&&_waccess_s(Argv[2],04)==0)
+    if(wcscmp(Argv[1],L"-c")&&PathFileExistsW(Argv[2]))
       cf=Argv[1];
   }
   if(!LauncherProfile(cf,config)){
