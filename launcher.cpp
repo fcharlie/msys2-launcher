@@ -21,10 +21,9 @@
 #define STRSAFE_E_INVALID_PARAMETER ((HRESULT)0x80070057L)
 
 inline HRESULT StringCchLengthW(
-    LPCWSTR psz,
-    size_t  cchMax,
-    size_t  *pcchLength
-)
+  LPCWSTR psz,
+  size_t  cchMax,
+  size_t  *pcchLength)
 {
   HRESULT hr = S_OK;
   size_t cchMaxPrev = cchMax;
@@ -32,46 +31,52 @@ inline HRESULT StringCchLengthW(
     psz++;
     cchMax--;
   }
-  if(cchMax==0) hr = STRSAFE_E_INVALID_PARAMETER;
+  if(cchMax==0)
+    hr = STRSAFE_E_INVALID_PARAMETER;
   if(pcchLength) {
-    if(SUCCEEDED(hr)) *pcchLength = cchMaxPrev - cchMax;
-    else *pcchLength = 0;
+    if(SUCCEEDED(hr))
+      *pcchLength = cchMaxPrev - cchMax;
+    else
+      *pcchLength = 0;
   }
   return hr;
 }
 
-HRESULT StringCchCopyW(
-    LPWSTR  pszDest,
-    size_t  cchDest,
-    LPCWSTR pszSrc
-){
-    HRESULT hr=S_OK;
-    if(cchDest==0||pszDest==nullptr) return STRSAFE_E_INVALID_PARAMETER;
-    while(cchDest &&(*pszSrc!=L'\0')){
-        *pszDest++=*pszSrc++;
-        cchDest--;
-    }
-    if(cchDest==0){
-        pszDest--;
-        hr=STRSAFE_E_INVALID_PARAMETER;
-    }
-    *pszDest=L'\0';
-    return hr;
+inline HRESULT StringCchCopyW(
+  LPWSTR  pszDest,
+  size_t  cchDest,
+  LPCWSTR pszSrc)
+{
+  HRESULT hr=S_OK;
+  if(cchDest==0||pszDest==nullptr)
+    return STRSAFE_E_INVALID_PARAMETER;
+  while(cchDest &&(*pszSrc!=L'\0')){
+    *pszDest++=*pszSrc++;
+    cchDest--;
+  }
+  if(cchDest==0){
+    pszDest--;
+    hr=STRSAFE_E_INVALID_PARAMETER;
+  }
+  *pszDest=L'\0';
+  return hr;
 }
 
 inline HRESULT StringCchCatW(
-    LPWSTR  pszDest,
-    size_t  cchDest,
-    LPCWSTR pszSrc){
-    HRESULT hr = S_OK;
-    if(cchDest==0||pszDest==nullptr) return STRSAFE_E_INVALID_PARAMETER;
-    size_t lengthDest;
-    if(StringCchLengthW(pszDest,cchDest,&lengthDest)!=S_OK){
-        hr=STRSAFE_E_INVALID_PARAMETER;
-    }else{
-        hr=StringCchCopyW(pszDest+lengthDest,cchDest-lengthDest,pszSrc);
-    }
-    return hr;
+  LPWSTR  pszDest,
+  size_t  cchDest,
+  LPCWSTR pszSrc)
+{
+  HRESULT hr = S_OK;
+  if(cchDest==0||pszDest==nullptr)
+    return STRSAFE_E_INVALID_PARAMETER;
+  size_t lengthDest;
+  if(StringCchLengthW(pszDest,cchDest,&lengthDest)!=S_OK){
+    hr=STRSAFE_E_INVALID_PARAMETER;
+  }else{
+    hr=StringCchCopyW(pszDest+lengthDest,cchDest-lengthDest,pszSrc);
+  }
+  return hr;
 }
 
 #endif
