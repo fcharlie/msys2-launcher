@@ -2,22 +2,96 @@
 * MSYS2 Launcher
 * Copyright (C) 2016, ForceStudio All Rights Reserved.
 **/
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
 #include <Windows.h>
 #include <Shlwapi.h>
 #include <iostream>
+#include <string>
+#include <vector>
+
+#ifndef __CYGWIN__
 #define  SECURITY_WIN32
 #include <Security.h>
 #include <StrSafe.h>
-#include <string>
-#include <vector>
+#else
+#define STRSAFE_MAX_CCH 2147483647
+#define STRSAFE_E_INVALID_PARAMETER ((HRESULT)0x80070057L)
+
+inline HRESULT StringCchLengthW(
+    LPCWSTR psz,
+    size_t  cchMax,
+    size_t  *pcchLength
+)
+{
+  HRESULT hr = S_OK;
+  size_t cchMaxPrev = cchMax;
+  while(cchMax && (*psz!=L'\0')) {
+    psz++;
+    cchMax--;
+  }
+  if(cchMax==0) hr = STRSAFE_E_INVALID_PARAMETER;
+  if(pcchLength) {
+    if(SUCCEEDED(hr)) *pcchLength = cchMaxPrev - cchMax;
+    else *pcchLength = 0;
+  }
+  return hr;
+}
+
+HRESULT StringCchCopyW(
+    LPWSTR  pszDest,
+    size_t  cchDest,
+    LPCWSTR pszSrc
+){
+    HRESULT hr=S_OK;
+    if(cchDest==0||pszDest==nullptr) return STRSAFE_E_INVALID_PARAMETER;
+    while(cchDest &&(*pszSrc!=L'\0')){
+        *pszDest++=*pszSrc++;
+        cchDest--;
+    }
+    if(cchDest==0){
+        pszDest--;
+        hr=STRSAFE_E_INVALID_PARAMETER;
+    }
+    *pszDest=L'\0';
+    return hr;
+}
+
+inline HRESULT StringCchCatW(
+    LPWSTR  pszDest,
+    size_t  cchDest,
+    LPCWSTR pszSrc){
+    HRESULT hr = S_OK;
+    if(cchDest==0||pszDest==nullptr) return STRSAFE_E_INVALID_PARAMETER;
+    size_t lengthDest;
+    if(StringCchLengthW(pszDest,cchDest,&lengthDest)!=S_OK){
+        hr=STRSAFE_E_INVALID_PARAMETER;
+    }else{
+        hr=StringCchCopyW(pszDest+lengthDest,cchDest-lengthDest,pszSrc);
+    }
+    return hr;
+}
+
+#endif
+
+
 
 #if defined(_MSC_VER)
 #if defined(_WIN32_WINNT) &&_WIN32_WINNT>=_WIN32_WINNT_WIN8
 #include <Processthreadsapi.h>
 #endif
+#endif
+
+#ifdef __GNUC__
+#define launcherStartup WinMain
+#define CHARPTR LPSTR
+#elif defined(_MSC_VER)
+#define launcherStartup wWinMain
+#define CHARPTR LPWSTR
+#else
+#error "Cannot support this compiler !"
 #endif
 
 #include "cpptoml.h"
@@ -28,7 +102,7 @@ struct LauncherStructure{
   std::wstring wd;
   std::wstring mintty;
   std::wstring icon;
-  std::wstring othrShell;
+  std::wstring otherShell;
   std::wstring shellArgs;
   std::vector<std::wstring> appendPath;
   bool enableZshell;
@@ -173,7 +247,7 @@ bool LauncherProfile(const wchar_t *cf,LauncherStructure &config)
   Strings("Launcher.WD",L"C:/MSYS2/usr/bin",config.wd);
   Strings("Launcher.Mintty",L"C:/MSYS2/usr/bin/mintty.exe",config.mintty);
   Strings("Launcher.ICONPath",L"/msys2.ico",config.icon);
-  Strings("Launcher.Shell",L"bash",config.othrShell);
+  Strings("Launcher.Shell",L"bash",config.otherShell);
   Strings("Launcher.AppendShellArgs",nullptr,config.shellArgs);
   Vector("Launcher.AppendPath",config.appendPath);
   config.enableZshell=Boolean("Launcher.EnableZshell",false);
@@ -341,7 +415,7 @@ bool PutEnvironmentVariableW(const wchar_t *name,const wchar_t *va)
     dwSize++;
     buffer[dwSize]=0;
   }
-  StringCbCatW(buffer,32767-dwSize,va);
+  StringCchCatW(buffer,32767-dwSize,va);
   return SetEnvironmentVariableW(name,buffer)?true:false;
 }
 
@@ -377,19 +451,26 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
 
   int const ArraySize=8192;
   wchar_t cmdline[ArraySize]={0};
-  auto hr=StringCbPrintf(cmdline,ArraySize,L"%s -i%s /usr/bin/%s --login ",
-  config.mintty.c_str(),
-  config.icon.c_str(),
-  config.enableZshell?L"zsh":config.othrShell.c_str());
+  auto hr=StringCchCatW(cmdline,ArraySize,config.mintty.c_str());
+  StringCchCatW(cmdline,ArraySize,L" -i ");
+  StringCchCatW(cmdline,ArraySize,config.icon.c_str());
+  StringCchCatW(cmdline,ArraySize,L" /usr/bin/");
+  if(config.enableZshell){
+      StringCchCatW(cmdline,ArraySize,L"zsh --login ");
+  }else{
+      StringCchCatW(cmdline,ArraySize,config.otherShell.c_str());
+      StringCchCatW(cmdline,ArraySize,L" --login ");
+  }
+//   auto hr=StringCchPrintfW(cmdline,ArraySize,L"%s -i%s /usr/bin/%s --login ",
+//   config.mintty.c_str(),
+//   config.icon.c_str(),
+//   config.enableZshell?L"zsh":config.otherShell.c_str());
   if(hr!=S_OK){
       MessageBoxW(nullptr,L"Please check your profile !",L"Parse commandline failed !",MB_OK|MB_ICONERROR);
       return false;
   }
   if(!config.shellArgs.empty()){
-      size_t l=0;
-      if(StringCbLength(cmdline,ArraySize,&l)==S_OK){
-          StringCbCatW(cmdline,ArraySize-l,config.othrShell.c_str());   
-      }
+      StringCchCatW(cmdline,ArraySize,config.shellArgs.c_str());  
   }
   ///CreateProcess
   BOOL result = CreateProcessW(
@@ -410,16 +491,6 @@ bool StartupMiniPosixEnv(LauncherStructure &config)
   }
   return true;
 }
-
-#ifdef __GNUC__
-#define launcherStartup WinMain
-#define CHARPTR LPSTR
-#elif defined(_MSC_VER)
-#define launcherStartup wWinMain
-#define CHARPTR LPWSTR
-#else
-#error "Cannot support this compiler !"
-#endif
 
 int WINAPI launcherStartup(
   HINSTANCE hInstance,

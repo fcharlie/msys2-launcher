@@ -102,8 +102,11 @@ struct datetime
 
         char buf[16];
         strftime(buf, 16, "%z", &t);
-
+#ifdef __CYGWIN__
+       int offset=strtol(buf,0,10);
+#else
         int offset = std::stoi(buf);
+#endif
         dt.hour_offset = offset / 100;
         dt.minute_offset = offset % 100;
         return dt;
@@ -1055,6 +1058,19 @@ inline std::shared_ptr<table> make_element<table>()
     return make_table();
 }
 
+#ifdef __CYGWIN__
+#include <sstream>
+    template < typename T > std::string to_string( const T& n )
+    {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+
+#define toString to_string
+#else
+#define toString std::to_string
+#endif
 /**
  * Exception class for all TOML parsing errors.
  */
@@ -1066,7 +1082,7 @@ class parse_exception : public std::runtime_error
     }
 
     parse_exception(const std::string& err, std::size_t line_number)
-        : std::runtime_error{err + " at line " + std::to_string(line_number)}
+        : std::runtime_error{err + " at line " +toString(line_number)}
     {
     }
 };
@@ -1735,7 +1751,11 @@ class parser
         it = end;
         try
         {
+#ifdef __CYGWIN__
+           return make_value<int64_t>(strtoll(v.c_str(),0,10));
+#else
             return make_value<int64_t>(std::stoll(v));
+#endif
         }
         catch (const std::invalid_argument& ex)
         {
@@ -1757,7 +1777,11 @@ class parser
         it = end;
         try
         {
+#ifdef __CYGWIN__
+            return make_value<double>(strtod(v.c_str(),0));
+#else
             return make_value<double>(std::stod(v));
+#endif
         }
         catch (const std::invalid_argument& ex)
         {
