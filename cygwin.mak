@@ -12,11 +12,11 @@ TARGET=launcher.exe
 
 all:$(TARGET)
 
-$(TARGET):launcher.o launcher_mingw.res
-	$(LD)  $(LDFALGS) launcher.o launcher_mingw.res -o launcher.exe $(LINKFLAGS)
+$(TARGET):launcher.o launcher.res
+	$(LD)  $(LDFALGS) launcher.o launcher.res -o launcher.exe $(LINKFLAGS)
 
 	
-launcher_mingw.res:launcher_mingw.rc
+launcher.res:launcher.rc
 	$(RC) -c 65001 $< -O coff -o $@
 	
 launcher.o:launcher.cpp
