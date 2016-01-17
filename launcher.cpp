@@ -503,6 +503,10 @@ int WINAPI launcherStartup(
   CHARPTR lpCmdLine,
   int nCmdShow)
 {
+  (void)hInstance;
+  (void)hPrevInstance;
+  (void)lpCmdLine;
+  (void)nCmdShow;
   LauncherStructure config;
   const wchar_t *cf=nullptr;
   int Argc;

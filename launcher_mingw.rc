@@ -2,6 +2,7 @@
 #include "windows.h"
 #include "resource.h"
 
+
 IDI_ICON_LAUNCHER ICON "launcher.ico"
 1 RT_MANIFEST launcher.exe.manifest
 
@@ -22,14 +23,14 @@ BEGIN
     BEGIN
         BLOCK "000904b0"
         BEGIN
-            VALUE "CompanyName", "Force Charlie\0"
-            VALUE "FileDescription", "MSYS2 Environment Launcher\0"
-            VALUE "FileVersion", "1.0.0\0"
-            VALUE "InternalName", "Launcher.exe\0"
-            VALUE "LegalCopyright", "Copyright © 2016 The ForceStudio.All Rights Reserved\0"
-            VALUE "OriginalFilename", "Launcher.exe\0"
-            VALUE "ProductName", "MSYS2 Environment Launcher\0"
-            VALUE "ProductVersion", "1.0.0.0\0"
+            VALUE "CompanyName", "Force Charlie"
+            VALUE "FileDescription", "MSYS2 Environment Launcher"
+            VALUE "FileVersion", "1.0.0"
+            VALUE "InternalName", "Launcher.exe"
+            VALUE "LegalCopyright", "Copyright © 2016 The ForceStudio.All Rights Reserved"
+            VALUE "OriginalFilename", "Launcher.exe"
+            VALUE "ProductName", "MSYS2 Environment Launcher"
+            VALUE "ProductVersion", "1.0.0.0"
         END
     END
     BLOCK "VarFileInfo"
