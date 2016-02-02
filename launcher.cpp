@@ -520,5 +520,5 @@ int WINAPI launcherStartup(
     return 1;
   }
   LocalFree(Argv);
-  return StartupMiniPosixEnv(config)?2:0;
+  return StartupMiniPosixEnv(config)?0:2;
 }
