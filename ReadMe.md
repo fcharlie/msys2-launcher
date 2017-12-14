@@ -1,4 +1,5 @@
-###MSYS2 Launcher
+## MSYS2 Launcher
+
 This helper tools.
 
 GCC build     
@@ -34,5 +35,6 @@ ${WINDIR}\\System32;${WINDIR};${WINDIR}\\System32\\Wbem;${WINDIR}\\System32\\Win
 AppendPath can set, add path to env
 
 
-##Other
-Dont use clang compiled, because clang link static failed.
+## Other
+
+~~Dont use clang compiled, because clang link static failed.~~
